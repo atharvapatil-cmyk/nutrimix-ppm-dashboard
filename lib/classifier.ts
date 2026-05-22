@@ -11,7 +11,6 @@ export function isValidBatchNumber(s: string): boolean {
 
 export function classifyByKeywords(vocText: string): string {
   if (!vocText) return 'Product Quality Issue'
-
   const voc = vocText.toLowerCase()
 
   // Special case: near expiry + redelivery = Delivery Issue
@@ -22,7 +21,6 @@ export function classifyByKeywords(vocText: string): string {
     return 'Delivery Issue'
   }
 
-  // Check keywords in order
   for (const rule of RULES) {
     for (const kw of rule.kw) {
       if (voc.includes(kw)) return rule.name
@@ -32,40 +30,67 @@ export function classifyByKeywords(vocText: string): string {
   return 'Product Quality Issue'
 }
 
+/**
+ * Extracts product, packaging, and flavour from a product name string.
+ * Mirrors the original App Script extractProductInfo_ function exactly.
+ */
 export function extractProductInfo(rawText: string): {
   product: string
   packaging: string
   flavour: string
 } {
-  const text = rawText.toLowerCase()
+  // Strip pipe-separated prefix (e.g. "SKU | Little Joys Nutrimix 2+ ...")
+  let slug = String(rawText)
+  if (slug.includes('|')) slug = slug.split('|').pop()!.trim()
+  const s = slug.toLowerCase()
 
-  // Detect product (2+, 7+, 13+, MamaMix)
-  let product = 'Unknown'
-  if (text.includes('2+')) product = '2+'
-  else if (text.includes('7+')) product = '7+'
-  else if (text.includes('13+')) product = '13+'
-  else if (text.includes('mamamix')) product = 'MamaMix'
+  // ── PRODUCT (default: 2+) ────────────────────────────────────────────
+  let product = '2+'
+  if (s.includes('13+') || s.includes('13-plus')) product = '13+'
+  else if (s.includes('7+') || s.includes('7-plus')) product = '7+'
+  else if (s.includes('mom') || s.includes('mama')) product = 'MamaMix'
 
-  // Detect packaging
-  let packaging = 'Other'
-  if (text.includes('350g jar')) packaging = '350g Jar'
-  else if (text.includes('350g pouch')) packaging = '350g Pouch'
-  else if (text.includes('700g pouch')) packaging = '700g Pouch'
-  else if (text.includes('1kg pouch')) packaging = '1kg Pouch'
-  else if (text.includes('400g pouch')) packaging = '400g Pouch'
-  else if (text.includes('mini')) packaging = 'Mini'
-  else if (text.includes('pack')) packaging = 'Pack'
+  // ── PACKAGING (default: 350g Jar) ───────────────────────────────────
+  let packaging = '350g Jar'
+  if (s.includes('mini') || s.includes('20g') || s.includes('20 g') || s.includes('30g') || s.includes('30 g')) {
+    packaging = 'Mini'
+  } else if (s.includes('700')) {
+    packaging = '700g Pouch'
+  } else if (s.includes('1 kg') || s.includes('1kg')) {
+    packaging = '1kg Pouch'
+  } else if (/pack of [36]|csv|combo/i.test(s)) {
+    packaging = 'Pack'
+  } else if (s.includes('400')) {
+    packaging = '400g Pouch'
+  } else if ((s.includes('350') && s.includes('pouch')) || s.includes('350g pouch')) {
+    packaging = '350g Pouch'
+  } else if (s.includes('pouch')) {
+    packaging = '350g Pouch'
+  } else if (s.includes('350') || s.includes('jar')) {
+    packaging = '350g Jar'
+  }
 
-  // Detect flavour
-  let flavour = 'Unflavored'
-  if (text.includes('chocolate')) flavour = 'Chocolate'
-  else if (text.includes('vanilla')) flavour = 'Vanilla'
-  else if (text.includes('strawberry')) flavour = 'Strawberry'
-  else if (text.includes('mango')) flavour = 'Mango'
-  else if (text.includes('cookies')) flavour = 'Cookies & Cream'
-  else if (text.includes('caramel')) flavour = 'Caramel'
-  else if (text.includes('unflavored')) flavour = 'Unflavored'
-  else if (text.includes('plain')) flavour = 'Unflavored'
+  // ── FLAVOUR (default: Chocolate) ────────────────────────────────────
+  let flavour = 'Chocolate'
+  if ((s.includes('hazelnut') && s.includes('chocolate')) || s.includes('chocolate hazelnut')) {
+    flavour = 'Chocolate Hazelnut'
+  } else if (s.includes('belgian')) {
+    flavour = 'Belgian Chocolate'
+  } else if (s.includes('cookies') && s.includes('cream')) {
+    flavour = 'Cookies & Cream'
+  } else if (s.includes('kulfi')) {
+    flavour = 'Kulfi Almond'
+  } else if (s.includes('strawberry')) {
+    flavour = 'Strawberry'
+  } else if (s.includes('vanilla')) {
+    flavour = 'Vanilla'
+  } else if (s.includes('mango')) {
+    flavour = 'Mango'
+  } else if (s.includes('unsweetened')) {
+    flavour = 'Unsweetened'
+  } else if (s.includes('lite')) {
+    flavour = 'Lite'
+  }
 
   return { product, packaging, flavour }
 }

@@ -77,5 +77,9 @@ export interface DashboardData {
     totalValid: number
     totalInvalid: number
     totalDuplicates: number
+    salesRowsProcessed?: number
+    salesRowsFiltered?: number
+    salesHeaders?: string[]
+    ljHeaders?: string[]
   }
 }
