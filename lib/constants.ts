@@ -1,5 +1,5 @@
-export const LJ_SPREADSHEET_ID = '1D2cR7PylAvoXB-wex4h9CgvPzt-s7GAVCho95H2hV5A'
-export const DRR_SPREADSHEET_ID = '1sNRNAH2Wv22qnAwoaP8CVM9p21TDw382jGcqABjz3z8'
+// Single spreadsheet: contains both LJ (complaints) and Live Sales Data sheets
+export const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '1D2cR7PylAvoXB-wex4h9CgvPzt-s7GAVCho95H2hV5A'
 export const START_YEAR = 2026
 export const START_WEEK = 1
 

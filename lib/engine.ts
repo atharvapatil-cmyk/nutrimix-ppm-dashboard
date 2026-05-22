@@ -1,4 +1,4 @@
-import { readLJSheet, readDRRSales } from './sheets'
+import { readLJSheet, readSalesSheet } from './sheets'
 import { classifyByKeywords, extractProductInfo, isValidImageLink, isValidBatchNumber } from './classifier'
 import { weekLabel, monthLabel, getAllWeeks, getAllMonths, getUniqueProductCats } from './ppm'
 import { EXCLUDE_FROM_PPM, CRITICAL_ISSUES } from './constants'
@@ -49,7 +49,7 @@ function emptyMetrics(periodKey: string, periodType: 'W' | 'M'): PeriodMetrics {
 
 export async function computeDashboardData(): Promise<DashboardData> {
   // 1. Read both sheets in parallel
-  const [ljRows, drrRows] = await Promise.all([readLJSheet(), readDRRSales()])
+  const [ljRows, drrRows] = await Promise.all([readLJSheet(), readSalesSheet()])
 
   // 2. Process LJ complaints
   const ljHeaders = (ljRows[0] ?? []).map((h) => String(h))

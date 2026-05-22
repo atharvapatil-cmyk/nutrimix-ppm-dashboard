@@ -1,16 +1,17 @@
 import { google } from 'googleapis'
-import { LJ_SPREADSHEET_ID, DRR_SPREADSHEET_ID } from './constants'
+import { SPREADSHEET_ID } from './constants'
+
+// Both LJ complaints and Live Sales Data live in the same spreadsheet
+// Only ONE sheet needs to be shared with the service account
 
 export function getGoogleAuth() {
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
-  if (!raw) {
-    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON not set in environment')
-  }
+  if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON not set in environment')
 
   let credentials
   try {
     credentials = JSON.parse(raw)
-  } catch (e) {
+  } catch {
     throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON')
   }
 
@@ -20,26 +21,22 @@ export function getGoogleAuth() {
   })
 }
 
-export async function readLJSheet(): Promise<string[][]> {
+async function readRange(range: string): Promise<string[][]> {
   const auth = getGoogleAuth()
   const sheets = google.sheets({ version: 'v4', auth })
-
   const resp = await sheets.spreadsheets.values.get({
-    spreadsheetId: LJ_SPREADSHEET_ID,
-    range: 'LJ!A:Z'
+    spreadsheetId: SPREADSHEET_ID,
+    range,
   })
-
   return (resp.data.values ?? []) as string[][]
 }
 
-export async function readDRRSales(): Promise<string[][]> {
-  const auth = getGoogleAuth()
-  const sheets = google.sheets({ version: 'v4', auth })
+/** Raw complaint rows from the Google Form response sheet */
+export async function readLJSheet(): Promise<string[][]> {
+  return readRange('LJ!A:Z')
+}
 
-  const resp = await sheets.spreadsheets.values.get({
-    spreadsheetId: DRR_SPREADSHEET_ID,
-    range: 'DRR!A:E'
-  })
-
-  return (resp.data.values ?? []) as string[][]
+/** Sales rows from the Live Sales Data sheet (synced from DRR) */
+export async function readSalesSheet(): Promise<string[][]> {
+  return readRange('Live Sales Data!A:E')
 }
