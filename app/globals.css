@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: #eef2f7;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #dce6f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4472c4;
+  border-radius: 3px;
+}

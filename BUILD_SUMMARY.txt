@@ -1,0 +1,188 @@
+================================================================================
+NUTRIMIX PPM DASHBOARD v2 - BUILD COMPLETE
+================================================================================
+
+PROJECT LOCATION: /tmp/nutrimix-v2/
+
+STATUS: ✓ All files created | ✓ TypeScript validated | ✓ Ready to deploy
+
+================================================================================
+FILES CREATED (25 source files)
+================================================================================
+
+CONFIGURATION FILES:
+  • package.json (NPM dependencies: next, react, googleapis, recharts)
+  • tsconfig.json (TypeScript strict mode enabled)
+  • tailwind.config.ts (Tailwind CSS configuration)
+  • postcss.config.js (PostCSS with tailwind + autoprefixer)
+  • next.config.js (External packages: googleapis)
+  • vercel.json (Cron job: daily 2 AM refresh)
+  • .env.example (Template for GOOGLE_SERVICE_ACCOUNT_JSON + CRON_SECRET)
+  • .gitignore (Standard Next.js/Node.js ignores)
+
+LIBRARY FILES (Core Logic):
+  • lib/constants.ts (6.4K)
+    - Spreadsheet IDs, business rules, issue type keywords
+    - EXCLUDE_FROM_PPM, CRITICAL_ISSUES definitions
+  
+  • lib/types.ts (2.0K)
+    - ProcessedComplaint, PeriodMetrics, KPIData, DashboardData interfaces
+  
+  • lib/classifier.ts (2.4K)
+    - isValidImageLink() - checks for Google Drive/Docs URLs
+    - isValidBatchNumber() - regex pattern /^[A-Za-z]+\d/
+    - classifyByKeywords() - keyword-based issue classification
+    - extractProductInfo() - extracts product, packaging, flavour
+  
+  • lib/sheets.ts (1.2K)
+    - getGoogleAuth() - initializes Google Auth from service account JSON
+    - readLJSheet() - fetches complaint data from LJ!A:Z
+    - readDRRSales() - fetches sales data from DRR!A:E
+  
+  • lib/ppm.ts (9.4K)
+    - getWeekNumber(), weekLabel(), monthLabel() - date helpers
+    - getAllWeeks(), getAllMonths() - generate periods
+    - calcPPM() - complaints/sales*1M with rounding
+    - buildSection() - aggregates PPM by row labels
+    - buildIssueSection() - aggregates PPM by issue types
+    - buildKPI() - computes last week vs prev week metrics
+    - getUniqueProductCats() - collects all product categories
+  
+  • lib/engine.ts (7.2K)
+    - computeDashboardData() - MAIN PROCESSING ENGINE
+      * Reads both sheets in parallel
+      * Validates complaints (hygiene checks)
+      * Deduplicates by order ID
+      * Classifies issues by keywords
+      * Extracts product info
+      * Aggregates into week/month metrics
+      * Processes sales data and joins with metrics
+      * Returns complete DashboardData
+
+APP FILES (Next.js):
+  • app/layout.tsx (352 bytes)
+    - Root layout, sets metadata
+  
+  • app/globals.css (358 bytes)
+    - Tailwind imports, body background, scrollbar styling
+  
+  • app/page.tsx (1.8K)
+    - Server component with revalidate=900 (ISR)
+    - Calls computeDashboardData() and buildKPI()
+    - Renders Dashboard component
+  
+  • app/api/data/route.ts (1.3K)
+    - GET /api/data with 15-minute in-memory cache
+    - ?refresh=1 forces fresh computation
+  
+  • app/api/cron/route.ts (2.1K)
+    - POST/GET /api/cron protected by x-cron-secret header
+    - Refreshes cache (called by Vercel daily at 2 AM)
+
+COMPONENTS (UI):
+  • components/KPICards.tsx (2.3K)
+    - 4 dark navy cards: Sales, Complaints, PPM, WoW Change
+    - Client component with color-coded deltas
+  
+  • components/PPMTable.tsx (3.8K)
+    - Scrollable table showing PPM by category
+    - Sticky first column (category names)
+    - Color-coded PPM cells: green <500, amber 500-2000, red >2000
+    - Grand total row at bottom
+    - Shows last 8 periods (newest first)
+  
+  • components/TrendChart.tsx (2.0K)
+    - Recharts LineChart with multiple data series
+    - Shows PPM trend over time
+    - Last 12 periods displayed
+  
+  • components/Dashboard.tsx (12K)
+    - Main dashboard orchestrator
+    - Header with refresh button
+    - KPI cards + stats bar (valid/invalid/duplicates)
+    - 6 tabs with tab controls:
+      * Packaging Type PPM
+      * Issue Type PPM
+      * Product Category PPM
+      * Critical Issues by Product
+      * Infestation by Packaging
+      * Primary Packaging Issues Details
+    - Toggle controls: Weekly/Monthly, Excl Del/Incl Del
+    - Renders TrendChart + PPMTable based on selected tab
+    - Footer with last updated timestamp + data source links
+
+DOCUMENTATION:
+  • README.md (6.7K)
+    - Complete architecture overview
+    - Business rules explanation
+    - Setup and deployment instructions
+    - API endpoint documentation
+    - Troubleshooting guide
+
+================================================================================
+BUSINESS LOGIC IMPLEMENTED
+================================================================================
+
+COMPLAINT VALIDATION:
+  ✓ INVALID: Missing BOTH image link AND valid batch number → excluded
+  ✓ DUPLICATE: Same order ID in earlier row → excluded  
+  ✓ VALID: Passes checks → included
+
+CLASSIFICATION:
+  ✓ Issue types: 11 types with keyword matching
+  ✓ Special rules: near expiry + redelivery = Delivery Issue
+  ✓ Product extraction: detects 2+/7+/13+/MamaMix, packaging, flavour
+
+PPM CALCULATION:
+  ✓ Formula: complaints / sales * 1,000,000
+  ✓ EXCLUDE_FROM_PPM: Wrong/Missing Product, Technical Issue
+  ✓ Delivery Issue: excluded from "Excl Del", included in "Incl Del"
+  ✓ Critical tracking: Infestation, Health Issue, Foreign Object
+
+AGGREGATION:
+  ✓ Weekly and monthly metrics computed simultaneously
+  ✓ Separate counts: by packaging, by product category, by issue type
+  ✓ Per-period PPM calculated for trend analysis
+  ✓ Grand totals computed across all periods
+
+================================================================================
+DEPLOYMENT CHECKLIST
+================================================================================
+
+LOCAL SETUP:
+  ✓ npm install --legacy-peer-deps (completed)
+  ✓ npx tsc --noEmit (TypeScript validation passed)
+  ✓ All imports validated and working
+
+ENVIRONMENT VARIABLES NEEDED:
+  □ GOOGLE_SERVICE_ACCOUNT_JSON - service account credentials JSON
+  □ CRON_SECRET - any secure random string
+
+BEFORE DEPLOYING TO VERCEL:
+  1. Create .env.local with service account JSON
+  2. Test locally: npm run dev
+  3. Verify data loads: check http://localhost:3000
+  4. Deploy to Vercel
+  5. Set env vars in Vercel dashboard
+  6. Verify /api/data endpoint returns data
+  7. Set up cron: Vercel auto-reads vercel.json
+
+OPTIONAL - MANUAL CRON TRIGGER:
+  curl -X POST https://your-domain.vercel.app/api/cron \
+    -H "x-cron-secret: your-secret"
+
+================================================================================
+VERIFICATION RESULTS
+================================================================================
+
+TypeScript Compilation: ✓ PASSED (no errors)
+Import Validation: ✓ PASSED
+File Structure: ✓ COMPLETE (25 files)
+Dependencies: ✓ INSTALLED (186 packages)
+
+Ready for: 
+  ✓ Local development (npm run dev)
+  ✓ Production build (npm run build)
+  ✓ Vercel deployment
+
+================================================================================
