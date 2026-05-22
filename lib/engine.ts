@@ -1,7 +1,7 @@
 import { readLJSheet, readSalesSheet } from './sheets'
 import { classifyByKeywords, extractProductInfo, isValidImageLink, isValidBatchNumber } from './classifier'
 import { weekLabel, monthLabel, getAllWeeks, getAllMonths, getUniqueProductCats, buildKPI } from './ppm'
-import { EXCLUDE_FROM_PPM, CRITICAL_ISSUES } from './constants'
+import { EXCLUDE_FROM_PPM, CRITICAL_ISSUES, IMAGE_COL_NAMES } from './constants'
 import type { PeriodMetrics, DashboardData } from './types'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -61,8 +61,16 @@ export async function computeDashboardData(): Promise<DashboardData> {
   const prodIdx  = findCol(ljHeaders, ['select product','product'])
   const oidIdx   = findCol(ljHeaders, ['enter original order id','original order id','order id','orderid'])
   const vocIdx   = findCol(ljHeaders, ['detailed voc','voc','voice of customer','complaint','issue description'])
-  const imgIdx   = findCol(ljHeaders, ['upload images/videos','upload images','image 1','image'])
-  const batchIdx = findCol(ljHeaders, ['enter batch number','batch number','batch no','batch'])
+  const batchIdx = findCol(ljHeaders, ['enter batch number','batch number','batch no','batch_number','batch'])
+
+  // Find ALL image-related columns (App Script checks upload images/videos + Image 1-5)
+  const imgColIdxs: number[] = []
+  IMAGE_COL_NAMES.forEach(name => {
+    ljHeaders.forEach((h, i) => {
+      const hl = h.toLowerCase().trim()
+      if ((hl === name || hl.includes(name)) && !imgColIdxs.includes(i)) imgColIdxs.push(i)
+    })
+  })
 
   let totalRaw = 0, totalNutrimix = 0, totalValid = 0, totalInvalid = 0, totalDuplicates = 0
   const seenOIDs = new Set<string>()
@@ -78,9 +86,12 @@ export async function computeDashboardData(): Promise<DashboardData> {
     totalNutrimix++
 
     // ── HYGIENE: Red row check (missing image AND missing batch) ──
-    const imgVal   = imgIdx   !== -1 ? String(row[imgIdx]   ?? '') : ''
+    // App Script checks ALL image columns (upload images/videos, Image 1, Image 2...)
     const batchVal = batchIdx !== -1 ? String(row[batchIdx] ?? '') : ''
-    const hasImg   = isValidImageLink(imgVal)
+    const hasImg   = imgColIdxs.some(idx => {
+      const v = String(row[idx] ?? '').trim()
+      return v.length > 5 && isValidImageLink(v)
+    })
     const hasBatch = isValidBatchNumber(batchVal)
 
     if (!hasImg && !hasBatch) {
