@@ -117,8 +117,36 @@ export function getPrevMonth(mk: string): string {
   return `M${mo - 1}-${yr}`
 }
 
+function countComplaintsExcl(m: PeriodMetrics | undefined): number {
+  if (!m) return 0
+  return Object.entries(m.compByIssue)
+    .filter(([k]) => !EXCLUDE_FROM_PPM.includes(k))
+    .reduce((s, [, v]) => s + v, 0)
+}
+
 export function buildKPI(metrics: Record<string, PeriodMetrics>): KPIData {
-  const lastWeek = getLastCompletedWeek()
+  // Find the most recent completed week that has EITHER sales OR complaint data
+  const calendarLastWeek = getLastCompletedWeek()
+
+  // Collect all weekly metric keys and sort newest-first
+  const weekKeys = Object.keys(metrics)
+    .filter(k => k.startsWith('W'))
+    .sort((a, b) => weekSortKey(b) - weekSortKey(a))
+
+  // Prefer the calendar last week if it has any data, otherwise find most recent with data
+  let lastWeek = calendarLastWeek
+  const calMetric = metrics[calendarLastWeek]
+  const calHasData = calMetric && (calMetric.salesTotal > 0 || Object.keys(calMetric.compByIssue).length > 0)
+
+  if (!calHasData) {
+    // Find most recent week with sales data (sales is more important for PPM)
+    const weekWithSales = weekKeys.find(k => (metrics[k]?.salesTotal ?? 0) > 0)
+    // Find most recent week with complaints
+    const weekWithComplaints = weekKeys.find(k => Object.keys(metrics[k]?.compByIssue ?? {}).length > 0)
+    // Prefer sales week (PPM needs sales denominator); fall back to complaint week
+    lastWeek = weekWithSales ?? weekWithComplaints ?? calendarLastWeek
+  }
+
   const prevWeek = getPrevWeek(lastWeek)
 
   const lastWeekMetric = metrics[lastWeek]
@@ -127,25 +155,8 @@ export function buildKPI(metrics: Record<string, PeriodMetrics>): KPIData {
   const sales = lastWeekMetric?.salesTotal ?? 0
   const salesPrev = prevWeekMetric?.salesTotal ?? 0
 
-  // Count complaints excluding Wrong/Missing Product and Technical Issue
-  let complaintsExcl = 0
-  let complaintsExclPrev = 0
-
-  if (lastWeekMetric) {
-    for (const [issueType, count] of Object.entries(lastWeekMetric.compByIssue)) {
-      if (!EXCLUDE_FROM_PPM.includes(issueType)) {
-        complaintsExcl += count
-      }
-    }
-  }
-
-  if (prevWeekMetric) {
-    for (const [issueType, count] of Object.entries(prevWeekMetric.compByIssue)) {
-      if (!EXCLUDE_FROM_PPM.includes(issueType)) {
-        complaintsExclPrev += count
-      }
-    }
-  }
+  const complaintsExcl     = countComplaintsExcl(lastWeekMetric)
+  const complaintsExclPrev  = countComplaintsExcl(prevWeekMetric)
 
   const ppmExcl = calcPPM(complaintsExcl, sales)
   const ppmExclPrev = calcPPM(complaintsExclPrev, salesPrev)
